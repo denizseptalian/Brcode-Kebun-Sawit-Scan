@@ -190,6 +190,16 @@ def baca_qr(bgr):
         return None
 
 
+# Pola untuk menghapus prefix "AF" di depan kode afdeling, mis. "AF01" -> "01"
+_POLA_PREFIX_AF = re.compile(r"^AF\s*", re.IGNORECASE)
+
+
+def _bersihkan_afdeling(afdeling):
+    """Buang huruf 'AF' di depan kode afdeling supaya yang dibaca/ditampilkan
+    cuma nomornya saja, mis. 'AF01' -> '01'."""
+    return _POLA_PREFIX_AF.sub("", afdeling).strip()
+
+
 def urai_payload_qr(teks):
     """Urai payload QR menjadi dict {afdeling, blok, tph}, atau None kalau
     formatnya tidak cocok dengan pola generator barcode TPH.
@@ -197,6 +207,7 @@ def urai_payload_qr(teks):
     Mendukung 2 format:
     1. BARU (underscore): "SSM_AF01_A8_001" -> kata paling depan (kode
        kebun, mis. "SSM") diabaikan; yang dibaca cuma Afdeling-Blok-TPH.
+       Prefix "AF" pada afdeling juga dibuang (jadi cuma "01").
     2. LAMA: "AFD ... - BLOK ... - TPH ..." (tetap didukung untuk
        kompatibilitas kalau masih ada barcode format lama).
     """
@@ -209,13 +220,13 @@ def urai_payload_qr(teks):
     m = _POLA_QR_UNDERSCORE.match(teks_bersih)
     if m:
         afdeling, blok, tph = (g.strip() for g in m.groups())
-        return {"afdeling": afdeling, "blok": blok, "tph": tph}
+        return {"afdeling": _bersihkan_afdeling(afdeling), "blok": blok, "tph": tph}
 
     # Fallback ke format LAMA
     m = _POLA_QR.search(teks_bersih)
     if m:
         afdeling, blok, tph = (g.strip() for g in m.groups())
-        return {"afdeling": afdeling, "blok": blok, "tph": tph}
+        return {"afdeling": _bersihkan_afdeling(afdeling), "blok": blok, "tph": tph}
 
     return None
 
